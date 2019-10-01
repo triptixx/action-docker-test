@@ -63,7 +63,7 @@ if [ -z "$CONTAINER_IP" ]; then
     trap ':' USR1
     docker kill "$CONTAINER_ID" >/dev/null 2>&1 || true
     docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
-    error "No container IP found"
+    error 'No container IP found'
     exit 8
 fi
 
