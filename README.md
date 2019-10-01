@@ -1,2 +1,2 @@
 # action-docker-test
-A Action CI plugin for start and test build docker images
+A plugin for [Actions CI](https://github.com/features/actions) to start and test build docker images
