@@ -1,0 +1,14 @@
+ 
+name: 'docker test'
+author: 'triptixx'
+description: 'A Action CI plugin for start and test build Docker images'
+inputs:
+  repo:
+    description: 'tag for the image to run and test'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+branding:
+  icon: 'package'
+  color: 'blue'
