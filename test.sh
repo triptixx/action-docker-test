@@ -36,4 +36,129 @@ if [ -n "$INPUT_DOCKER_NETWORK_ID" ]; then
     RUN_NETWORK="--network=$INPUT_DOCKER_NETWORK_ID"
 fi
 
-echo $RUN_NETWORK
+
+# If INPUT_RUN is provided, just run the command in the container and exit
+if [ -n "$INPUT_RUN" ]; then
+    if verbose; then
+        RUN_DBG=x
+        set -x
+    fi
+
+    exec docker run --rm --entrypoint= $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" sh -c$RUN_DBG "$INPUT_RUN"
+fi
+
+# Start the container
+CONTAINER_ID="$(if verbose; then set -x; fi; docker create --rm $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" $INPUT_RUN_CMD)"
+
+# Start the container and print the logs
+# and exit if the container stops
+trap 'docker kill $CONTAINER_ID >/dev/null 2>/dev/null' EXIT
+trap 'error "The container exited unexpectedly :("; exit 10' USR1
+( docker start --attach --interactive "$CONTAINER_ID" ; kill -s USR1 $$ ) &
+
+# Get container IP, hopefully before the container exits
+sleep 1
+CONTAINER_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID)"
+if [ -z "$CONTAINER_IP" ]; then
+    trap ':' USR1
+    docker kill "$CONTAINER_ID" >/dev/null 2>&1 || true
+    docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+    error 'No container IP found'
+    exit 8
+fi
+
+(
+if [ ${DELAY} -eq 0 ]; then exit 0; fi
+if verbose; then set -x; fi
+
+# Wait
+sleep $DELAY
+)
+
+# Run pre-curl script
+if [ -n "$INPUT_EXEC_PRE" ]; then
+    set +e
+    if verbose; then DEBUG=-x; fi
+    echo $INPUT_EXEC_PRE | docker exec -i "$CONTAINER_ID" sh $DEBUG
+    retval=$?
+    set -e
+
+    if [ $retval != 0 ]; then
+        error "Pre script exited with $retval"
+        exit $retval
+    fi
+fi
+
+if [ -n "$INPUT_LOG_PIPE" ]; then
+    set +e
+    if verbose; then PIPE_DBG=x; fi
+    timeout ${TIMEOUT} \
+        docker logs -f $CONTAINER_ID 2>&1 | (sh -c$PIPE_DBG "${INPUT_LOG_PIPE}" && pkill -PIPE timeout) # this is a horrible hack
+    retval=$?
+    set -e
+
+  # 141 is 128 + 13 (SIGPIPE), caused by (pkill induced) pipefail. This indicates success
+    if [ $retval != 141 ]; then
+        if [ $retval == 124 ]; then
+            error "Log output parsing timed out after ${TIMEOUT}s"
+            exit $retval
+        elif [ $retval != 0 ]; then
+            error "Log output parsing exited with $retval"
+            exit $retval
+        fi
+    fi
+fi
+
+# Attempt to curl
+if [ -n "$INPUT_CURL" ]; then
+    (
+    if verbose; then set -x; fi
+
+    curl -L \
+        --retry $RETRY \
+        --retry-delay $RETRY_DELAY \
+        --retry-max-time 10 \
+        --retry-connrefused \
+        $INPUT_CURL_OPTS \
+        "$CONTAINER_IP$INPUT_CURL" \
+        > /tmp/output
+    )
+
+    if verbose; then
+        cat /tmp/output
+    fi
+fi
+
+# Test the output
+if [ -n "$INPUT_CURL" -a -n "$INPUT_PIPE" ]; then
+    set +e
+    if verbose; then set -x; fi
+
+    eval $INPUT_PIPE < /tmp/output
+    retval=$?
+    set -e
+    set +x
+
+    if [ $retval != 0 ]; then
+        error "Pipe exited with $retval"
+        exit $retval
+    fi
+fi
+rm -f /tmp/output
+
+# Run post-curl script
+if [ -n "$INPUT_EXEC_POST" ]; then
+    set +e
+    if verbose; then DEBUG=-x; fi
+    echo $INPUT_EXEC_POST | docker exec -i "$CONTAINER_ID" sh $DEBUG
+    retval=$?
+    set -e
+
+    if [ $retval != 0 ]; then
+        error "Post script exited with $retval"
+        exit $retval
+    fi
+fi
+
+# Prevent error exiting when the container is removed
+trap ':' USR1
