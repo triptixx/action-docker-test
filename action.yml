@@ -6,6 +6,8 @@ inputs:
   repo:
     description: 'tag for the image to run and test'
     required: true
+  docker_network_id:
+    description: 'id of the container network'
 runs:
   using: 'docker'
   image: 'Dockerfile'
