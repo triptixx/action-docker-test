@@ -36,7 +36,6 @@ if [ -n "$INPUT_DOCKER_NETWORK_ID" ]; then
     RUN_NETWORK="--network=$INPUT_DOCKER_NETWORK_ID"
 fi
 
-
 # If INPUT_RUN is provided, just run the command in the container and exit
 if [ -n "$INPUT_RUN" ]; then
     if verbose; then
@@ -44,25 +43,25 @@ if [ -n "$INPUT_RUN" ]; then
         set -x
     fi
 
-    exec docker run --rm --entrypoint= $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" sh -c$RUN_DBG "$INPUT_RUN"
+    exec docker container run --rm --entrypoint= $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" sh -c$RUN_DBG "$INPUT_RUN"
 fi
 
 # Start the container
-CONTAINER_ID="$(if verbose; then set -x; fi; docker create --rm $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" $INPUT_RUN_CMD)"
+CONTAINER_ID="$(if verbose; then set -x; fi; docker container create --rm $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" $INPUT_RUN_CMD)"
 
 # Start the container and print the logs
 # and exit if the container stops
-trap 'docker kill $CONTAINER_ID >/dev/null 2>/dev/null' EXIT
+trap 'docker container kill $CONTAINER_ID >/dev/null 2>/dev/null' EXIT
 trap 'error "The container exited unexpectedly :("; exit 10' USR1
-( docker start --attach --interactive "$CONTAINER_ID" ; kill -s USR1 $$ ) &
+( docker container start --attach --interactive "$CONTAINER_ID" ; kill -s USR1 $$ ) &
 
 # Get container IP, hopefully before the container exits
 sleep 1
-CONTAINER_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID)"
+CONTAINER_IP="$(docker container inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID)"
 if [ -z "$CONTAINER_IP" ]; then
     trap ':' USR1
-    docker kill "$CONTAINER_ID" >/dev/null 2>&1 || true
-    docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+    docker container kill "$CONTAINER_ID" >/dev/null 2>&1 || true
+    docker container rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
     error 'No container IP found'
     exit 8
 fi
@@ -79,7 +78,7 @@ sleep $DELAY
 if [ -n "$INPUT_EXEC_PRE" ]; then
     set +e
     if verbose; then DEBUG=-x; fi
-    echo $INPUT_EXEC_PRE | docker exec -i "$CONTAINER_ID" sh $DEBUG
+    echo $INPUT_EXEC_PRE | docker container exec -i "$CONTAINER_ID" sh $DEBUG
     retval=$?
     set -e
 
@@ -93,7 +92,7 @@ if [ -n "$INPUT_LOG_PIPE" ]; then
     set +e
     if verbose; then PIPE_DBG=x; fi
     timeout ${TIMEOUT} \
-        docker logs -f $CONTAINER_ID 2>&1 | (sh -c$PIPE_DBG "${INPUT_LOG_PIPE}" && pkill -PIPE timeout) # this is a horrible hack
+        docker container logs -f $CONTAINER_ID 2>&1 | (sh -c$PIPE_DBG "${INPUT_LOG_PIPE}" && pkill -PIPE timeout) # this is a horrible hack
     retval=$?
     set -e
 
@@ -150,7 +149,7 @@ rm -f /tmp/output
 if [ -n "$INPUT_EXEC_POST" ]; then
     set +e
     if verbose; then DEBUG=-x; fi
-    echo $INPUT_EXEC_POST | docker exec -i "$CONTAINER_ID" sh $DEBUG
+    echo $INPUT_EXEC_POST | docker container exec -i "$CONTAINER_ID" sh $DEBUG
     retval=$?
     set -e
 
