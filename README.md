@@ -18,7 +18,7 @@ steps:
 ```
 
 ### Available options
-- `docker_username`    docker 'username' for pushing. _required_
+- `verbose`    print curl output and running commands. _default: `false`_
 - `docker_password`    docker 'password' for pushing. _required_
 - `from`               re-tag from this repo. _optional_
 - `repo`               tag to this repo/repo to push to. _required_
