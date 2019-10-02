@@ -18,9 +18,18 @@ steps:
 ```
 
 ### Available options
-- `verbose`    print curl output and running commands. _default: `false`_
-- `docker_password`    docker 'password' for pushing. _required_
-- `from`               re-tag from this repo. _optional_
-- `repo`               tag to this repo/repo to push to. _required_
-- `registry`           docker registry of your account. _default: `https://hub.docker.com`_
-- `tags`               tag TARGET_IMAGE that refers to SOURCE_IMAGE. _default: `latest`_
+- `verbose`        print curl output and running commands. _default: `false`_
+- `repo`           docker 'password' for pushing. _required_
+- `delay`          startup delay for the container before executing any actions. _default: `10`_
+- `retry`          curl retry count before giving up. _default: `5`_
+- `retry_delay`    curl delay before retrying. _default: `5`_
+- `timeout`        timeout to `docker container logs`. _default: `10`_
+- `run`            run a command in a test container and exit. _optional_
+- `run_args`       arguments to pass to `docker container create` _optional_. _default: `latest`_
+- `run_cmd`        override docker container CMD. _optional_
+- `curl`           url path to curl e.g. `:8080/directory`. _default: `latest`_
+- `curl_opts`      . _default: `latest`_
+- `pipe`           . _default: `latest`_
+- `log_pipe`       . _default: `latest`_
+- `exec_pre`       . _default: `latest`_
+- `exec_post`      . _default: `latest`_
