@@ -19,7 +19,7 @@ inputs:
     description: 'curl delay before retrying'
     default: 5
   timeout:
-    description: ''
+    description: 'time output logs container'
     default: 10
   run:
     description: 'run a command in a test container and exit'
@@ -34,7 +34,7 @@ inputs:
   pipe:
     description: 'shell code to execute on curl output'
   log_pipe:
-    description: ''
+    description: 'shell code to execute on logs container output'
   exec_pre:
     description: 'shell commands inside the container to run before curl'
   exec_post:
