@@ -9,10 +9,36 @@ inputs:
   repo:
     description: 'tag for the image to run and test'
     required: true
+  delay:
+    description: 'startup delay for the container before executing any actions'
+    default: 10
+  retry:
+    description: 'curl retry count before giving up'
+    default: 5
+  retry_delay:
+    description: 'curl delay before retrying'
+    default: 5
+  timeout:
+    description: ''
+    default: 10
   run:
     description: 'run a command in a test container and exit'
-  docker_network_id:
-    description: 'id of the container network'
+  run_args:
+    description: 'arguments to pass to docker create'
+  run_cmd:
+    description: 'override docker container CMD'
+  curl:
+    description: 'url path to curl'
+  curl_opts:
+    description: 'additional options to pass to curl'
+  pipe:
+    description: 'shell code to execute on curl output'
+  log_pipe:
+    description: ''
+  exec_pre:
+    description: 'shell commands inside the container to run before curl'
+  exec_post:
+    description: 'shell commands inside the container to run after curl'
 runs:
   using: 'docker'
   image: 'Dockerfile'
