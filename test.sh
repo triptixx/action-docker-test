@@ -8,15 +8,21 @@ error() { >&2 echo -e "${RED}Error: $@${RESET}"; }
 
 verbose() { test "$INPUT_VERBOSE" = true -o "$INPUT_VERBOSE" = 1; }
 
+# $INPUT_VERBOSE       print curl output and running commands
 # $INPUT_REPO          tag for the image to run and test
 # $INPUT_DELAY         startup delay for the container before curl'ing it
 # $INPUT_RETRY         curl retry count before giving up
 # $INPUT_RETRY_DELAY   curl delay before retrying
-# $INPUT_PIPE          shell code to execute on curl output. useful for ensuring output correctness
-# $INPUT_CURL_OPTS     additional options to pass to curl
+# $INPUT_TIMEOUT       time output logs container
+# $INPUT_RUN           override docker container CMD, with sh -c
 # $INPUT_RUN_ARGS      arguments to pass to `docker create`
 # $INPUT_RUN_CMD       override docker container CMD
-# $INPUT_RUN           override docker container CMD, with sh -c
+# $INPUT_CURL          url path to curl
+# $INPUT_CURL_OPTS     additional options to pass to curl
+# $INPUT_PIPE          shell code to execute on curl output. useful for ensuring output correctness
+# $INPUT_LOG_PIPE      shell code to execute on logs container output
+# $INPUT_EXEC_PRE      shell commands inside the container to run before curl
+# $INPUT_EXEC_POST     shell commands inside the container to run after curl
 
 if [ -z "$INPUT_REPO" ]; then
     error "Missing 'repo' argument required for testing"
@@ -32,10 +38,6 @@ if [ -z "$INPUT_CURL" -a -n "$INPUT_LOG_PIPE" ]; then
     DELAY=0
 fi
 
-if [ -n "$INPUT_DOCKER_NETWORK_ID" ]; then
-    RUN_NETWORK="--network=$INPUT_DOCKER_NETWORK_ID"
-fi
-
 # If INPUT_RUN is provided, just run the command in the container and exit
 if [ -n "$INPUT_RUN" ]; then
     if verbose; then
@@ -43,11 +45,11 @@ if [ -n "$INPUT_RUN" ]; then
         set -x
     fi
 
-    exec docker container run --rm --entrypoint= $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" sh -c$RUN_DBG "$INPUT_RUN"
+    exec docker container run --rm --entrypoint= $INPUT_RUN_ARGS "$INPUT_REPO" sh -c$RUN_DBG "$INPUT_RUN"
 fi
 
 # Start the container
-CONTAINER_ID="$(if verbose; then set -x; fi; docker container create --rm $RUN_NETWORK $INPUT_RUN_ARGS "$INPUT_REPO" $INPUT_RUN_CMD)"
+CONTAINER_ID="$(if verbose; then set -x; fi; docker container create --rm $INPUT_RUN_ARGS "$INPUT_REPO" $INPUT_RUN_CMD)"
 
 # Start the container and print the logs
 # and exit if the container stops
