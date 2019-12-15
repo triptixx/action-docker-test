@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eo pipefail
+
+exec docker inspect -f "{{ index .Config.Labels \"$@\" }}" "$INPUT_REPO" | tr -d '\n'
